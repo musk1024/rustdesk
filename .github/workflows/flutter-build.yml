@@ -251,6 +251,14 @@ jobs:
         shell: bash
         run: echo "SODIUM_LIB_DIR=$VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }}/lib" >> "$GITHUB_ENV"
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         run: |
           # Windows: build RustDesk
@@ -377,6 +385,7 @@ jobs:
 
   # The fallback for the flutter version, we use Sciter for 32bit Windows.
   build-for-windows-sciter:
+    if: false  # disabled: building only Windows + macOS
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
     runs-on: ${{ matrix.job.os }}
     # Temporarily disable this action due to additional test is needed.
@@ -450,6 +459,14 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         id: build
         shell: bash
@@ -528,7 +545,7 @@ jobs:
             ./SignOutput/rustdesk-*.exe
 
   build-rustdesk-ios:
-    if: ${{ inputs.upload-artifact }}
+    if: false  # disabled: building only Windows + macOS
     name: build rustdesk ios ipa
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
@@ -622,6 +639,14 @@ jobs:
           name: liblibrustdesk.a
           path: target/aarch64-apple-ios/release/liblibrustdesk.a
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         shell: bash
         run: |
@@ -805,6 +830,14 @@ jobs:
           cargo -V
           rustc -V
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         run: |
           if [ "${{ matrix.job.target }}" = "aarch64-apple-darwin" ]; then
@@ -816,6 +849,11 @@ jobs:
           fi
           ./build.py --flutter --hwcodec --unix-file-copy-paste ${{ matrix.job.extra-build-args }}
 
+      - name: Ad-hoc re-sign app for unsigned distribution
+        if: env.MACOS_P12_BASE64 == '' && env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          codesign --force --deep --sign - ./flutter/build/macos/Build/Products/Release/RustDesk.app
+          codesign --verify --deep --strict ./flutter/build/macos/Build/Products/Release/RustDesk.app
       - name: create unsigned dmg
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
@@ -866,12 +904,12 @@ jobs:
             rustdesk*-${{ matrix.job.arch }}.dmg
 
   publish_unsigned:
+    if: false  # disabled: building only Windows + macOS
     needs:
       - build-for-macOS
       - build-for-windows-flutter
       - build-for-windows-sciter
     runs-on: ubuntu-latest
-    if: ${{ inputs.upload-artifact }}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -909,6 +947,7 @@ jobs:
           files: rustdesk-${{ env.VERSION }}-unsigned.tar.gz
 
   build-rustdesk-android:
+    if: false  # disabled: building only Windows + macOS
     needs: [generate-bridge]
     name: build rustdesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
@@ -1101,6 +1140,14 @@ jobs:
           name: librustdesk.so.${{ matrix.job.target }}
           path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         shell: bash
         env:
@@ -1201,9 +1248,9 @@ jobs:
             signed-apk/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
 
   build-rustdesk-android-universal:
+    if: false  # disabled: building only Windows + macOS
     needs: [build-rustdesk-android]
     name: build rustdesk android universal apk
-    if: ${{ inputs.upload-artifact }}
     runs-on: ubuntu-24.04
     env:
       reltype: release
@@ -1310,6 +1357,14 @@ jobs:
           name: librustdesk.so.i686-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86
 
+      - name: Inject custom server config
+        shell: bash
+        env:
+          RS_RENDEZVOUS: ${{ secrets.RS_RENDEZVOUS }}
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RS_API: ${{ secrets.RS_API }}
+        run: |
+          python3 res/inject_custom.py
       - name: Build rustdesk
         shell: bash
         env:
@@ -1385,6 +1440,7 @@ jobs:
             signed-apk/rustdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
   build-rustdesk-linux:
+    if: false  # disabled: building only Windows + macOS
     needs: [generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
@@ -1722,7 +1778,7 @@ jobs:
             res/rustdesk-${{ env.VERSION }}*.zst
 
   build-rustdesk-linux-sciter:
-    if: ${{ inputs.upload-artifact }}
+    if: false  # disabled: building only Windows + macOS
     runs-on: ${{ matrix.job.on }}
     name: build-rustdesk-linux-sciter ${{ matrix.job.target }}
     strategy:
@@ -1949,10 +2005,10 @@ jobs:
           path: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
 
   build-appimage:
+    if: false  # disabled: building only Windows + macOS
     name: Build appimage ${{ matrix.job.target }}
     needs: [build-rustdesk-linux]
     runs-on: ubuntu-22.04
-    if: ${{ inputs.upload-artifact }}
     strategy:
       fail-fast: false
       matrix:
@@ -1999,12 +2055,12 @@ jobs:
             ./appimage/rustdesk-${{ env.VERSION }}-*.AppImage
 
   build-flatpak:
+    if: false  # disabled: building only Windows + macOS
     name: Build flatpak ${{ matrix.job.target }}${{ matrix.job.suffix }}
     needs:
       - build-rustdesk-linux
       - build-rustdesk-linux-sciter
     runs-on: ${{ matrix.job.on }}
-    if: ${{ inputs.upload-artifact }}
     strategy:
       fail-fast: false
       matrix:
@@ -2084,7 +2140,7 @@ jobs:
             flatpak/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak
 
   build-rustdesk-web:
-    if: False
+    if: false  # disabled: building only Windows + macOS
     name: build-rustdesk-web
     runs-on: ubuntu-22.04
     permissions:
